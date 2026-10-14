@@ -63,6 +63,9 @@ export { MAX_QUANTITY } from './services/pricing';
 export async function listActiveStores(): Promise<StoreInfo[]> {
   return storesSvc.listActiveStores();
 }
+export async function listStores(): Promise<StoreInfo[]> {
+  return storesSvc.listStores();
+}
 export async function getStore(storeId: number): Promise<StoreInfo | null> {
   return storesSvc.getStore(storeId);
 }

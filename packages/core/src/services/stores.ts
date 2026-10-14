@@ -1,5 +1,5 @@
 import { storeMembers, stores } from '@tokobun/db';
-import { and, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import type { StoreInfo } from '../contracts';
 import { CoreError } from '../contracts';
 import { db } from './util';
@@ -22,6 +22,12 @@ export function toStoreInfo(r: StoreRow): StoreInfo {
 
 export async function listActiveStores(): Promise<StoreInfo[]> {
   const rows = await db().select().from(stores).where(eq(stores.isActive, true));
+  return rows.map(toStoreInfo);
+}
+
+/** All stores, active and inactive, oldest first. */
+export async function listStores(): Promise<StoreInfo[]> {
+  const rows = await db().select().from(stores).orderBy(asc(stores.id));
   return rows.map(toStoreInfo);
 }
 

@@ -51,7 +51,8 @@ Migration bookkeeping fix (done in the same change):
 ### Routes
 ```
 /login
-/                                  store picker (cards: name, @bot, active badge, orders today; "New store" form)
+/                                  store picker (cards: name, @bot, active badge, orders in the last 24 h;
+                                   "New store" form)
 /akun                              admin accounts (list, add, delete) + change own password
 /toko/[store]                      store dashboard
 /toko/[store]/{products,stock,orders,payments,users,vouchers,broadcasts,support,payouts,settings}[/...]
@@ -103,12 +104,14 @@ still shows, so the "New store" button stays visible.
     message; unverified tokens are never stored.
   - A token already used by another store fails with a field error (from `UNIQUE(bot_token)`).
   - The new store's `settings.storeName` and `settings.channelUrl` are initialised from the form.
-- Store settings page gains a **Bot & store** section: name, bot token (empty = unchanged, otherwise re-verified),
-  admin Telegram ids, admin chat id, channel URL, active switch.
-  - Name and channel each have a single field that writes both `stores.*` and the matching `settings.*` key, so
-    the panel and the bot never show different values.
-  - The fields show the `stores.*` values. Existing stores whose two values differ today (live: `Default Store` vs
-    `TokoBun`) are reconciled the first time the section is saved.
+- Store settings page gains a **Bot & store** section: bot token (empty = unchanged, otherwise re-verified;
+  shows the current `@username`), admin Telegram ids, admin chat id, active switch.
+- Store name and channel stay in the existing **Store** settings section, so there is a single field for each.
+  - Saving them writes both the `settings.*` key and `stores.name` / `stores.channel_url`, so the panel, the picker
+    and the bot never show different values.
+  - Existing stores whose two values differ today (live: `Default Store` vs `TokoBun`) are reconciled the first time
+    the section is saved.
+- The bot token is never sent to the browser.
 
 ### Accounts page
 - Lists all admin accounts, adds an account (username + password, same validation as today), deletes an account.
