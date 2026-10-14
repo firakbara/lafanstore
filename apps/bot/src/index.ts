@@ -31,7 +31,8 @@ async function startStore(store: StoreInfo): Promise<BotHandle> {
   console.log(`[bot] store "${store.name}" → @${bot.botInfo.username}`);
   if (!cfg.adminChatId) console.warn(`[bot]   ⚠ store "${store.name}" has no adminChatId: sale notifications disabled`);
   await setCommands(bot.api).catch((err) => console.warn(`[bot]   setMyCommands failed for "${store.name}":`, (err as Error).message));
-  const stopWorker = cfg.broadcastWorker ? startBroadcastWorker(bot.api, store.id) : () => {};
+  // The broadcast worker starts last, after every call that can throw, so a failed start leaves none behind.
+  const startWorker = () => (cfg.broadcastWorker ? startBroadcastWorker(bot.api, store.id) : async () => {});
 
   if (baseCfg.webhookUrl) {
     const webhookPath = `${baseCfg.webhookPath}/${store.slug}`;
@@ -40,26 +41,45 @@ async function startStore(store: StoreInfo): Promise<BotHandle> {
       secret_token: baseCfg.webhookSecret ?? undefined,
       allowed_updates: [...allowed_updates],
     });
+    const stopWorker = startWorker();
     return {
       storeId: store.id,
       slug: store.slug,
       webhookPath,
       handler,
       stop: async () => {
-        stopWorker();
-        await bot.api.deleteWebhook().catch(() => {});
+        await Promise.all([stopWorker(), bot.api.deleteWebhook().catch(() => {})]);
       },
     };
   }
 
   await bot.api.deleteWebhook();
-  void bot.start({ allowed_updates: [...allowed_updates] }).catch((err) => console.error(`[bot] polling stopped for "${store.name}":`, (err as Error).message));
+  // grammY rethrows 401/409 from getUpdates, rejecting bot.start(): report it so the supervisor retries.
+  let stopping = false;
+  const dead = new Promise<Error>((resolve) => {
+    bot.start({ allowed_updates: [...allowed_updates] }).then(
+      () => {
+        if (!stopping) resolve(new Error('polling ended unexpectedly'));
+      },
+      (err) => {
+        console.error(`[bot] polling stopped for "${store.name}":`, (err as Error).message);
+        resolve(err instanceof Error ? err : new Error(String(err)));
+      },
+    );
+  });
+  const stopWorker = startWorker();
   return {
     storeId: store.id,
     slug: store.slug,
+    dead,
     stop: async () => {
-      stopWorker();
-      await bot.stop();
+      stopping = true;
+      const worker = stopWorker();
+      try {
+        await bot.stop();
+      } finally {
+        await worker;
+      }
     },
   };
 }

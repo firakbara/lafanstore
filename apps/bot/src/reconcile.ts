@@ -13,6 +13,8 @@ export interface ReconcilePlan {
   start: StoreInfo[];
   restart: StoreInfo[];
   stop: number[];
+  /** Failed starts of stores that are now inactive or gone: re-activating one retries it at once. */
+  forget: number[];
 }
 
 /** Fields that the running bot depends on; any change means the bot must be restarted. */
@@ -26,7 +28,7 @@ export function planReconcile(
   stores: StoreInfo[],
   now: number,
 ): ReconcilePlan {
-  const plan: ReconcilePlan = { start: [], restart: [], stop: [] };
+  const plan: ReconcilePlan = { start: [], restart: [], stop: [], forget: [] };
   const active = stores.filter((s) => s.isActive);
   const activeIds = new Set(active.map((s) => s.id));
   for (const s of active) {
@@ -41,5 +43,6 @@ export function planReconcile(
     plan.start.push(s);
   }
   for (const id of running.keys()) if (!activeIds.has(id)) plan.stop.push(id);
+  for (const id of failed.keys()) if (!activeIds.has(id)) plan.forget.push(id);
   return plan;
 }
