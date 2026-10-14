@@ -21,6 +21,7 @@ describe('planReconcile', () => {
     expect(p.start.map((s) => s.id)).toEqual([1, 2]);
     expect(p.restart).toEqual([]);
     expect(p.stop).toEqual([]);
+    expect(p.forget).toEqual([]);
   });
 
   test('ignores inactive stores and stops running ones that became inactive', () => {
@@ -63,5 +64,12 @@ describe('planReconcile', () => {
     expect(planReconcile(new Map(), failed, [s1], 1_000 + RETRY_FAILED_MS - 1).start).toEqual([]);
     expect(planReconcile(new Map(), failed, [s1], 1_000 + RETRY_FAILED_MS).start.map((s) => s.id)).toEqual([1]);
     expect(planReconcile(new Map(), failed, [store(1, { botToken: '1000:FIXED' })], 1_001).start.map((s) => s.id)).toEqual([1]);
+  });
+
+  test('forgets failed starts of stores that are inactive or gone', () => {
+    const failed = new Map([1, 2, 3].map((id) => [id, { fingerprint: storeFingerprint(store(id)), failedAt: 0 }] as const));
+    const p = planReconcile(new Map(), failed, [store(1), store(2, { isActive: false })], 1);
+    expect(p.forget).toEqual([2, 3]);
+    expect(p.start).toEqual([]);
   });
 });
