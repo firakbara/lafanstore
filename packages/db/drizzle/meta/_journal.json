@@ -15,6 +15,13 @@
       "when": 1791827968833,
       "tag": "0001_add-multi-store",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791980313453,
+      "tag": "0002_store-scoped-admin",
+      "breakpoints": true
     }
   ]
 }

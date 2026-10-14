@@ -2,7 +2,6 @@ import { afterAll, beforeEach, describe, expect, test } from 'bun:test';
 import { broadcasts, getDb, stores } from '@tokobun/db';
 import { eq } from 'drizzle-orm';
 import {
-  addStoreMember,
   claimBroadcast,
   closeSupportSession,
   countBroadcastAudience,
@@ -16,14 +15,13 @@ import {
   getSettings,
   getStore,
   getStoreBySlug,
-  getStoresForAdmin,
   getUser,
+  listStores,
   markBlockedBot,
   nextBroadcastRecipients,
   openSupportSession,
   rate,
   recordBroadcastProgress,
-  removeStoreMember,
   revokeApiKeys,
   setBanned,
   setCurrency,
@@ -36,7 +34,7 @@ import {
   upsertTelegramUser,
   verifyApiKey,
 } from '../src';
-import { expectCode, makeAdmin, makePayment, makeUser, resetDb } from './helpers';
+import { expectCode, makePayment, makeUser, resetDb } from './helpers';
 
 beforeEach(resetDb);
 afterAll(resetDb);
@@ -281,15 +279,14 @@ describe('stores', () => {
     await expectCode(updateStore(s.id, { botToken: 'nope' }), 'INVALID_INPUT');
   });
 
-  test('store members: add, list, remove', async () => {
-    const s = await createStore({ slug: 'member-test', name: 'M', botToken: '555555:ABCdefGHIjklMNOpqrSTUvwxyz000003' });
-    const adminId = await makeAdmin();
-    await addStoreMember(s.id, adminId, 'owner');
-    const adminStores = await getStoresForAdmin(adminId);
-    expect(adminStores).toHaveLength(1);
-    expect(adminStores[0]!.id).toBe(s.id);
-
-    await removeStoreMember(s.id, adminId);
-    expect(await getStoresForAdmin(adminId)).toHaveLength(0);
+  test('listStores returns active and inactive stores ordered by id', async () => {
+    const a = await createStore({ slug: 'store-a', name: 'A', botToken: '1111:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' });
+    const b = await createStore({ slug: 'store-b', name: 'B', botToken: '2222:BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB' });
+    await updateStore(b.id, { isActive: false });
+    const all = await listStores();
+    const ids = all.map((s) => s.id);
+    expect(ids).toEqual([...ids].sort((x, y) => x - y));
+    expect(all.find((s) => s.id === a.id)?.isActive).toBe(true);
+    expect(all.find((s) => s.id === b.id)?.isActive).toBe(false);
   });
 });

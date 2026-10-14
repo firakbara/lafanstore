@@ -35,20 +35,6 @@ export const stores = pgTable('stores', {
   createdAt: createdAt(),
 });
 
-export const storeMemberRole = pgEnum('store_member_role', ['owner', 'manager']);
-
-export const storeMembers = pgTable(
-  'store_members',
-  {
-    id: serial('id').primaryKey(),
-    storeId: integer('store_id').notNull().references(() => stores.id, { onDelete: 'cascade' }),
-    adminUserId: integer('admin_user_id').notNull().references((): AnyPgColumn => adminUsers.id, { onDelete: 'cascade' }),
-    role: storeMemberRole('role').notNull(),
-    createdAt: createdAt(),
-  },
-  (t) => [uniqueIndex('store_members_store_admin_uq').on(t.storeId, t.adminUserId)],
-);
-
 // ---------- users ----------
 export const users = pgTable(
   'users',
