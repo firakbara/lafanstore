@@ -31,7 +31,7 @@ export const POST = endpoint(async ({ request }) => {
 	const body = await readJson(request);
 	const slug = str(body, 'slug', { max: 64 }).toLowerCase().trim();
 	if (!/^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$/.test(slug)) throw new BadRequest('2–64 characters: a-z, 0-9 and -, not starting or ending with -', 'slug');
-	const name = str(body, 'name', { max: 128 }).trim();
+	const name = str(body, 'name', { max: 64 }).trim();
 	if (!name) throw new BadRequest('Required', 'name');
 	const botToken = str(body, 'botToken', { max: 256 }).trim();
 	if (!/^\d+:[A-Za-z0-9_-]{30,}$/.test(botToken)) throw new BadRequest('Bot token format looks wrong (expected 123456:ABC…)', 'botToken');

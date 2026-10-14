@@ -55,12 +55,20 @@ export function parseVoucherInput(body: Record<string, unknown>) {
 	};
 }
 
+async function assertVoucherProduct(storeId: number, productId: number | null) {
+	if (productId == null) return;
+	const [row] = await getDb().select({ id: products.id }).from(products).where(and(eq(products.id, productId), eq(products.storeId, storeId))).limit(1);
+	if (!row) throw new BadRequest('Product not found', 'productId');
+}
+
 export async function createVoucher(storeId: number, input: ReturnType<typeof parseVoucherInput>) {
+	await assertVoucherProduct(storeId, input.productId);
 	const [row] = await getDb().insert(vouchers).values({ ...input, storeId }).returning({ id: vouchers.id });
 	return row;
 }
 
 export async function updateVoucher(id: number, storeId: number, input: ReturnType<typeof parseVoucherInput>) {
+	await assertVoucherProduct(storeId, input.productId);
 	const [row] = await getDb().update(vouchers).set(input).where(and(eq(vouchers.id, id), eq(vouchers.storeId, storeId))).returning({ id: vouchers.id });
 	if (!row) throw new BadRequest('Voucher not found');
 	return row;
