@@ -5,13 +5,29 @@
 	import FieldError from '#lib/components/FieldError.svelte';
 	import PageHeader from '#lib/components/PageHeader.svelte';
 	import { fmtDate } from '#lib/format.ts';
-	import { toast } from '#lib/ui.svelte.ts';
+	import { confirmAction, toast } from '#lib/ui.svelte.ts';
 
 	const qc = useQueryClient();
 	const q = createQuery(() => ({
 		queryKey: ['admins'],
 		queryFn: () => api<{ items: { id: number; username: string; createdAt: string }[]; me: { id: number; username: string } }>('/api/admins')
 	}));
+
+	let deleting = $state<number | null>(null);
+
+	async function remove(a: { id: number; username: string }) {
+		if (!(await confirmAction({ title: `Delete admin "${a.username}"?`, body: 'They will be logged out.', confirmLabel: 'Delete', danger: true }))) return;
+		deleting = a.id;
+		try {
+			await api(`/api/admins/${a.id}`, { method: 'DELETE' });
+			await qc.invalidateQueries({ queryKey: ['admins'] });
+			toast.success(`Admin “${a.username}” deleted`);
+		} catch (e) {
+			toast.error((e as Error).message);
+		} finally {
+			deleting = null;
+		}
+	}
 
 	const pwRule = ({ value }: { value: string }) => (value.length < 8 ? 'At least 8 characters' : undefined);
 
@@ -43,21 +59,33 @@
 	}));
 </script>
 
-<PageHeader title="Admins" subtitle="Panel accounts. New admins are added as managers of the current store." />
+<PageHeader title="Accounts" subtitle="Admin accounts. Every account can manage every store." />
 
 <div class="grid gap-4 lg:grid-cols-[1fr_360px]">
 	<section class="card h-fit">
-		<div class="border-b border-line px-4 py-3 text-[13px] font-semibold">Accounts</div>
+		<div class="flex items-center justify-between border-b border-line px-4 py-3">
+			<span class="text-[13px] font-semibold">Accounts</span>
+			{#if q.data}<span class="text-xs text-muted tabular">{q.data.items.length}</span>{/if}
+		</div>
 		{#if q.isPending}
 			<div class="h-24 animate-pulse"></div>
 		{:else if q.isError}
 			<p class="p-4 text-danger">{q.error.message}</p>
 		{:else if q.data}
+			{@const me = q.data.me}
 			<ul class="divide-y divide-line text-[13px]">
 				{#each q.data.items as a (a.id)}
-					<li class="flex items-center justify-between px-4 py-2.5">
-						<span class="font-medium">{a.username} {#if a.id === q.data.me.id}<span class="ml-1 text-xs text-accent">(you)</span>{/if}</span>
-						<span class="text-xs text-muted">added {fmtDate(a.createdAt, false)}</span>
+					<li class="flex min-h-12 items-center gap-3 px-4 py-2">
+						<div class="grid size-7 shrink-0 place-items-center rounded-full bg-surface-2 text-xs font-semibold text-muted">{a.username.charAt(0).toUpperCase()}</div>
+						<div class="min-w-0 flex-1">
+							<div class="truncate font-medium">{a.username} {#if a.id === me.id}<span class="ml-1 text-xs text-accent">(you)</span>{/if}</div>
+							<div class="text-xs text-muted">added {fmtDate(a.createdAt, false)}</div>
+						</div>
+						{#if a.id !== me.id}
+							<button class="btn btn-ghost btn-sm text-danger" disabled={deleting === a.id} onclick={() => remove(a)}>
+								{deleting === a.id ? 'Deleting…' : 'Delete'}
+							</button>
+						{/if}
 					</li>
 				{/each}
 			</ul>
