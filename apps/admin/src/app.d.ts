@@ -1,4 +1,6 @@
 // See https://svelte.dev/docs/kit/types#app.d.ts
+import type { PublicStore } from '#lib/server/stores.ts';
+
 declare global {
 	namespace App {
 		interface Locals {
@@ -6,10 +8,12 @@ declare global {
 			sessionToken: string | null;
 			/** Secondary display currency (from fxRates) chosen in the top bar; null = USD only. */
 			currency: string | null;
-			/** Currently selected store ID for multi-store admin. */
+			/** Store named by the URL (/toko/[store] or /api/toko/[store]); null on global routes or unknown slug. */
+			store: PublicStore | null;
+			/** locals.store.id on store routes; 0 elsewhere. Global routes must not read it. */
 			storeId: number;
-			/** Stores accessible by the admin (cached from hooks to avoid re-querying in layout). */
-			adminStores: { id: number; slug: string; name: string; botUsername: string | null; adminChatId: number | null; channelUrl: string | null; isActive: boolean }[];
+			/** Slug from the last-store cookie when it names an existing store. */
+			lastStore: string | null;
 		}
 	}
 }

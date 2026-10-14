@@ -1,4 +1,4 @@
-import { adminSessions, adminUsers, getDb, storeMembers, stores } from '@tokobun/db';
+import { adminSessions, adminUsers, getDb } from '@tokobun/db';
 import { and, eq, gt, lt, sql } from 'drizzle-orm';
 import {
 	generateSessionToken,
@@ -32,13 +32,7 @@ export async function ensureBootstrapAdmin(): Promise<void> {
 			return;
 		}
 		const passwordHash = await Bun.password.hash(password);
-		const [admin] = await db.insert(adminUsers).values({ username, passwordHash }).onConflictDoNothing().returning();
-		if (admin) {
-			const allStores = await db.select({ id: stores.id }).from(stores);
-			if (allStores.length) {
-				await db.insert(storeMembers).values(allStores.map((s) => ({ storeId: s.id, adminUserId: admin.id, role: 'owner' as const }))).onConflictDoNothing();
-			}
-		}
+		await db.insert(adminUsers).values({ username, passwordHash }).onConflictDoNothing();
 		console.info(`[admin] bootstrapped first admin "${username}"`);
 	}
 	bootstrapped = true;
@@ -124,10 +118,26 @@ export async function changePassword(adminId: number, current: string, next: str
 	await db.delete(adminSessions).where(and(eq(adminSessions.adminId, adminId), sql`${adminSessions.id} <> ${keep}`));
 }
 
-export async function listAdmins(storeId: number) {
+export async function listAllAdmins() {
 	return getDb()
 		.select({ id: adminUsers.id, username: adminUsers.username, createdAt: adminUsers.createdAt })
 		.from(adminUsers)
-		.innerJoin(storeMembers, and(eq(storeMembers.adminUserId, adminUsers.id), eq(storeMembers.storeId, storeId)))
 		.orderBy(adminUsers.id);
+}
+
+/** Why an account may not be deleted, or null when it may. */
+export function deleteAdminGuard(actorId: number, targetId: number, totalAdmins: number): string | null {
+	if (actorId === targetId) return 'You cannot delete your own account';
+	if (totalAdmins <= 1) return 'The last admin account cannot be deleted';
+	return null;
+}
+
+/** Deletes an admin account; its sessions go with it (FK cascade). */
+export async function deleteAdmin(actorId: number, targetId: number): Promise<void> {
+	const db = getDb();
+	const [{ n } = { n: 0 }] = await db.select({ n: sql<number>`count(*)::int` }).from(adminUsers);
+	const err = deleteAdminGuard(actorId, targetId, n);
+	if (err) throw new AuthInputError(err);
+	const deleted = await db.delete(adminUsers).where(eq(adminUsers.id, targetId)).returning({ id: adminUsers.id });
+	if (!deleted.length) throw new AuthInputError('Admin account not found');
 }
