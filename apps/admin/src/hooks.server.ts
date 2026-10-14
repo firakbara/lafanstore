@@ -1,21 +1,29 @@
 import type { Handle } from '@sveltejs/kit/hooks';
-import { getStoresForAdmin } from '@tokobun/core';
+import { getStoreBySlug, listStores } from '@tokobun/core';
 import { validateSession } from '#lib/server/auth.ts';
 import { CURRENCY_COOKIE } from '#lib/server/money.ts';
-import { SESSION_COOKIE, STORE_COOKIE, sessionCookieOptions as cookieOptions } from '#lib/server/session.ts';
+import { LAST_STORE_COOKIE, SESSION_COOKIE, sessionCookieOptions as cookieOptions } from '#lib/server/session.ts';
+import { toPublicStore } from '#lib/server/stores.ts';
+import { legacyRedirect } from '#lib/store-path.ts';
 
 const PUBLIC_PATHS = new Set(['/login', '/favicon.svg', '/robots.txt', '/api/health']);
+const SLUG_RE = /^[a-z0-9-]{1,64}$/;
+
+async function fallbackSlug(lastStore: string | null): Promise<string | null> {
+	if (lastStore) return lastStore;
+	const all = await listStores();
+	return all[0]?.slug ?? null;
+}
 
 export const handle: Handle = async ({ event, resolve }) => {
 	const token = event.cookies.get(SESSION_COOKIE) ?? null;
 	event.locals.admin = null;
 	event.locals.sessionToken = null;
-	event.locals.adminStores = [];
+	event.locals.store = null;
+	event.locals.storeId = 0;
+	event.locals.lastStore = null;
 	const ccy = event.cookies.get(CURRENCY_COOKIE);
 	event.locals.currency = ccy && /^[A-Z]{3,5}$/.test(ccy) ? ccy : null;
-	const storeRaw = event.cookies.get(STORE_COOKIE);
-	const requestedStoreId = storeRaw && /^\d+$/.test(storeRaw) ? Number(storeRaw) : 0;
-	event.locals.storeId = 1;
 
 	if (token) {
 		const session = await validateSession(token).catch((err) => {
@@ -28,27 +36,46 @@ export const handle: Handle = async ({ event, resolve }) => {
 			if (session.renewedUntil) {
 				event.cookies.set(SESSION_COOKIE, token, cookieOptions(session.renewedUntil));
 			}
-			const adminStores = await getStoresForAdmin(session.admin.id).catch(() => []);
-			event.locals.adminStores = adminStores.map((s) => ({ id: s.id, slug: s.slug, name: s.name, botUsername: s.botUsername, adminChatId: s.adminChatId, channelUrl: s.channelUrl, isActive: s.isActive }));
-			if (requestedStoreId && adminStores.some((s) => s.id === requestedStoreId)) {
-				event.locals.storeId = requestedStoreId;
-			} else if (adminStores.length > 0) {
-				event.locals.storeId = adminStores[0]!.id;
-				if (requestedStoreId && requestedStoreId !== event.locals.storeId) {
-					event.cookies.set(STORE_COOKIE, String(event.locals.storeId), { path: '/', httpOnly: true, secure: true, sameSite: 'lax', maxAge: 60 * 60 * 24 * 365 });
-				}
-			}
 		} else {
 			event.cookies.delete(SESSION_COOKIE, { path: '/' });
 		}
 	}
 
 	const path = event.url.pathname;
+	const isApi = path.startsWith('/api/');
 	const isPublic = PUBLIC_PATHS.has(path) || path.startsWith('/_app/');
 	if (!event.locals.admin && !isPublic) {
-		if (path.startsWith('/api/')) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+		if (isApi) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 		const next = encodeURIComponent(path + event.url.search);
 		return new Response(null, { status: 303, headers: { location: `/login?next=${next}` } });
+	}
+
+	if (event.locals.admin) {
+		const lastRaw = event.cookies.get(LAST_STORE_COOKIE);
+		const last = lastRaw && SLUG_RE.test(lastRaw) ? await getStoreBySlug(lastRaw) : null;
+		event.locals.lastStore = last?.slug ?? null;
+
+		// Old bookmarks (/orders, /products/5, …) land in the last-used store.
+		if (event.request.method === 'GET' && !isApi && legacyRedirect(path, '', 'x')) {
+			const target = legacyRedirect(path, event.url.search, await fallbackSlug(event.locals.lastStore));
+			if (target) return new Response(null, { status: 303, headers: { location: target } });
+		}
+
+		// Typed loosely: `store` only exists in the generated route params once routes/…/toko/[store] exists.
+		const slug = (event.params as Record<string, string | undefined>).store;
+		if (slug) {
+			const store = SLUG_RE.test(slug) ? await getStoreBySlug(slug) : null;
+			if (store) {
+				event.locals.store = toPublicStore(store);
+				event.locals.storeId = store.id;
+				if (!isApi && event.request.method === 'GET' && event.locals.lastStore !== store.slug) {
+					event.cookies.set(LAST_STORE_COOKIE, store.slug, { path: '/', httpOnly: true, secure: true, sameSite: 'lax', maxAge: 60 * 60 * 24 * 365 });
+				}
+			} else if (isApi) {
+				return Response.json({ error: 'Store not found' }, { status: 404 });
+			}
+			// Unknown slug on a page: the store layout's load throws a 404 (Task 5).
+		}
 	}
 
 	const response = await resolve(event);

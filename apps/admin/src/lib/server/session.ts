@@ -2,7 +2,8 @@
 import { createHash, randomBytes } from 'node:crypto';
 
 export const SESSION_COOKIE = 'tb_admin_session';
-export const STORE_COOKIE = 'tb_store';
+/** Slug of the store opened last; only used to pick where legacy URLs redirect, never to scope data. */
+export const LAST_STORE_COOKIE = 'tb_last_store';
 export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 /** Renew the expiry when less than this much lifetime remains (sliding sessions). */
 export const SESSION_RENEW_BELOW_MS = SESSION_TTL_MS / 2;
