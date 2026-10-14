@@ -1,4 +1,4 @@
-import { adminUsers, getDb, payments, productDiscounts, products, storeMembers, stockItems, stores, users, vouchers } from '@tokobun/db';
+import { adminUsers, getDb, payments, productDiscounts, products, stockItems, stores, users, vouchers } from '@tokobun/db';
 import { eq, sql } from 'drizzle-orm';
 import { applyLedger, generateProductCode, generatePaymentCode } from '../src';
 
@@ -10,7 +10,6 @@ export async function resetDb() {
     users, products, product_discounts, stock_items, vouchers, orders, voucher_redemptions, ledger_entries,
     payments, referral_earnings, referral_payouts, broadcasts, support_sessions, api_keys, ratings, settings
     restart identity cascade`);
-  await d.delete(storeMembers);
   await d.delete(stores).where(sql`${stores.id} > 1`);
   await d.delete(adminUsers);
 }

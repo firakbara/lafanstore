@@ -92,15 +92,6 @@ export async function updateStore(
 ): Promise<StoreInfo> {
   return storesSvc.updateStore(storeId, patch);
 }
-export async function getStoresForAdmin(adminUserId: number): Promise<StoreInfo[]> {
-  return storesSvc.getStoresForAdmin(adminUserId);
-}
-export async function addStoreMember(storeId: number, adminUserId: number, role: 'owner' | 'manager'): Promise<void> {
-  return storesSvc.addStoreMember(storeId, adminUserId, role);
-}
-export async function removeStoreMember(storeId: number, adminUserId: number): Promise<void> {
-  return storesSvc.removeStoreMember(storeId, adminUserId);
-}
 
 // ===== users =====
 export async function upsertTelegramUser(storeId: number, input: TelegramUserInput): Promise<{ user: UserProfile; isNew: boolean }> {

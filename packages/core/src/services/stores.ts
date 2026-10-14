@@ -1,5 +1,5 @@
-import { storeMembers, stores } from '@tokobun/db';
-import { and, asc, eq } from 'drizzle-orm';
+import { stores } from '@tokobun/db';
+import { asc, eq } from 'drizzle-orm';
 import type { StoreInfo } from '../contracts';
 import { CoreError } from '../contracts';
 import { db } from './util';
@@ -105,26 +105,4 @@ export async function updateStore(
   const [r] = await db().update(stores).set(set).where(eq(stores.id, storeId)).returning();
   if (!r) throw new CoreError('NOT_FOUND', 'store not found');
   return toStoreInfo(r);
-}
-
-export async function getStoresForAdmin(adminUserId: number): Promise<StoreInfo[]> {
-  const rows = await db()
-    .select({ store: stores })
-    .from(storeMembers)
-    .innerJoin(stores, eq(stores.id, storeMembers.storeId))
-    .where(eq(storeMembers.adminUserId, adminUserId));
-  return rows.map((r) => toStoreInfo(r.store));
-}
-
-export async function addStoreMember(storeId: number, adminUserId: number, role: 'owner' | 'manager'): Promise<void> {
-  await db()
-    .insert(storeMembers)
-    .values({ storeId, adminUserId, role })
-    .onConflictDoUpdate({ target: [storeMembers.storeId, storeMembers.adminUserId], set: { role } });
-}
-
-export async function removeStoreMember(storeId: number, adminUserId: number): Promise<void> {
-  await db()
-    .delete(storeMembers)
-    .where(and(eq(storeMembers.storeId, storeId), eq(storeMembers.adminUserId, adminUserId)));
 }
