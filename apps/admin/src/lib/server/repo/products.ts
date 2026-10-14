@@ -11,11 +11,12 @@ const P_ID = sql.raw('"products"."id"');
 const P_PARENT = sql.raw('"products"."parent_id"');
 // Correlated subqueries reference the outer row explicitly: drizzle renders single-table columns unqualified.
 export const availableCount = sql<number>`(select count(*)::int from stock_items si where si.product_id = ${P_ID} and si.status = 'available')`;
-const variantCount = sql<number>`(select count(*)::int from products v where v.parent_id = ${P_ID})`;
+const P_STORE = sql.raw('"products"."store_id"');
+const variantCount = sql<number>`(select count(*)::int from products v where v.parent_id = ${P_ID} and v.store_id = ${P_STORE})`;
 const variantStock = sql<number | null>`(
   select case when bool_or(v.unlimited) then null else count(s.id)::int end
   from products v left join stock_items s on s.product_id = v.id and s.status = 'available'
-  where v.parent_id = ${P_ID})`;
+  where v.parent_id = ${P_ID} and v.store_id = ${P_STORE})`;
 const tierCount = sql<number>`(select count(*)::int from product_discounts pd where pd.product_id = ${P_ID})`;
 const parentName = sql<string | null>`(select p2.name from products p2 where p2.id = ${P_PARENT})`;
 
@@ -114,7 +115,7 @@ export async function getProductAdmin(id: number, storeId: number, fmt: MoneyFmt
 		db
 			.select({ id: products.id, code: products.code, name: products.name, price: products.price, isActive: products.isActive, unlimited: products.unlimited, stock: availableCount, sortOrder: products.sortOrder })
 			.from(products)
-			.where(eq(products.parentId, id))
+			.where(and(eq(products.parentId, id), eq(products.storeId, storeId)))
 			.orderBy(asc(products.sortOrder), asc(products.name)),
 		db.select({ n: sql<number>`count(*)::int` }).from(orders).where(eq(orders.productId, id))
 	]);
@@ -190,16 +191,16 @@ export function parseProductInput(body: Record<string, unknown>): ProductInput {
 	};
 }
 
-async function assertParent(parentId: number | null, selfId?: number) {
+async function assertParent(storeId: number, parentId: number | null, selfId?: number) {
 	if (parentId == null) return;
 	if (parentId === selfId) throw new BadRequest('A product cannot be its own parent', 'parentId');
-	const [parent] = await getDb().select({ isCollection: products.isCollection, parentId: products.parentId }).from(products).where(eq(products.id, parentId));
+	const [parent] = await getDb().select({ isCollection: products.isCollection, parentId: products.parentId }).from(products).where(and(eq(products.id, parentId), eq(products.storeId, storeId)));
 	if (!parent) throw new BadRequest('Parent collection not found', 'parentId');
 	if (!parent.isCollection) throw new BadRequest('Parent must be a collection', 'parentId');
 }
 
 export async function createProduct(storeId: number, input: ProductInput) {
-	await assertParent(input.parentId);
+	await assertParent(storeId, input.parentId);
 	if (input.isCollection && input.parentId) throw new BadRequest('Collections cannot be nested', 'parentId');
 	return getDb().transaction(async (tx) => {
 		const { discounts, ...values } = input;
@@ -210,7 +211,7 @@ export async function createProduct(storeId: number, input: ProductInput) {
 }
 
 export async function updateProduct(id: number, storeId: number, input: ProductInput) {
-	await assertParent(input.parentId, id);
+	await assertParent(storeId, input.parentId, id);
 	if (input.isCollection && input.parentId) throw new BadRequest('Collections cannot be nested', 'parentId');
 	return getDb().transaction(async (tx) => {
 		const { discounts, ...values } = input;

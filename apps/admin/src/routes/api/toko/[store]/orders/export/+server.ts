@@ -72,7 +72,7 @@ export const GET = endpoint(async ({ url, locals }) => {
 	return new Response(csv, {
 		headers: {
 			'Content-Type': 'text/csv; charset=utf-8',
-			'Content-Disposition': `attachment; filename="orders-${date}.csv"`,
+			'Content-Disposition': `attachment; filename="orders-${locals.store!.slug}-${date}.csv"`,
 			'Cache-Control': 'no-store',
 		},
 	});

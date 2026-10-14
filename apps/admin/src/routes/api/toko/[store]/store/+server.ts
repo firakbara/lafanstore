@@ -32,6 +32,12 @@ export const PATCH = endpoint(async ({ request, locals }) => {
 	else if (body.adminChatId !== undefined) throw new BadRequest('Admin chat id must be a whole number', 'adminChatId');
 	if (typeof body.isActive === 'boolean') patch.isActive = body.isActive;
 
-	const updated = await updateStore(locals.storeId, patch);
+	let updated;
+	try {
+		updated = await updateStore(locals.storeId, patch);
+	} catch (err) {
+		if (/bot token is already used/.test((err as Error).message)) throw new BadRequest('This bot is already used by another store', 'botToken');
+		throw err;
+	}
 	return toPublicStore(updated);
 });
