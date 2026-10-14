@@ -12,7 +12,7 @@ export const PATCH = endpoint(async ({ request, locals }) => {
 
 	const rawToken = typeof body.botToken === 'string' ? body.botToken.trim() : '';
 	if (rawToken) {
-		if (rawToken.length > 256) throw new BadRequest('Bot token is too long', 'botToken');
+		if (!/^\d+:[A-Za-z0-9_-]{30,}$/.test(rawToken) || rawToken.length > 256) throw new BadRequest('Bot token format looks wrong (expected 123456:ABC…)', 'botToken');
 		const current = (await getStore(locals.storeId)) as StoreInfo;
 		if (rawToken !== current.botToken) {
 			const v = await verifyBotToken(rawToken);
