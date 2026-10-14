@@ -1,5 +1,5 @@
 import { adminSessions, adminUsers, getDb } from '@tokobun/db';
-import { and, eq, gt, lt, sql } from 'drizzle-orm';
+import { and, eq, gt, lt, ne, sql } from 'drizzle-orm';
 import {
 	generateSessionToken,
 	hashSessionToken,
@@ -125,19 +125,36 @@ export async function listAllAdmins() {
 		.orderBy(adminUsers.id);
 }
 
+const SELF_DELETE_ERROR = 'You cannot delete your own account';
+const LAST_ADMIN_ERROR = 'The last admin account cannot be deleted';
+
 /** Why an account may not be deleted, or null when it may. */
 export function deleteAdminGuard(actorId: number, targetId: number, totalAdmins: number): string | null {
-	if (actorId === targetId) return 'You cannot delete your own account';
-	if (totalAdmins <= 1) return 'The last admin account cannot be deleted';
+	if (actorId === targetId) return SELF_DELETE_ERROR;
+	if (totalAdmins <= 1) return LAST_ADMIN_ERROR;
 	return null;
 }
 
 /** Deletes an admin account; its sessions go with it (FK cascade). */
 export async function deleteAdmin(actorId: number, targetId: number): Promise<void> {
+	// Self-deletion needs no database; the "never the last admin" rule is enforced by the DELETE itself.
+	const selfErr = deleteAdminGuard(actorId, targetId, Number.POSITIVE_INFINITY);
+	if (selfErr) throw new AuthInputError(selfErr);
 	const db = getDb();
-	const [{ n } = { n: 0 }] = await db.select({ n: sql<number>`count(*)::int` }).from(adminUsers);
-	const err = deleteAdminGuard(actorId, targetId, n);
-	if (err) throw new AuthInputError(err);
-	const deleted = await db.delete(adminUsers).where(eq(adminUsers.id, targetId)).returning({ id: adminUsers.id });
-	if (!deleted.length) throw new AuthInputError('Admin account not found');
+	// Single statement, and the count locks every admin row (FOR UPDATE): two admins deleting each other
+	// at the same time serialize, and the second one counts only the survivor. A plain count(*) subquery
+	// would not do — under READ COMMITTED both statements would see two rows and both delete.
+	const deleted = await db
+		.delete(adminUsers)
+		.where(
+			and(
+				eq(adminUsers.id, targetId),
+				ne(adminUsers.id, actorId),
+				sql`(SELECT count(*) FROM (SELECT 1 FROM ${adminUsers} FOR UPDATE) AS locked) > 1`
+			)
+		)
+		.returning({ id: adminUsers.id });
+	if (deleted.length) return;
+	const [stillThere] = await db.select({ id: adminUsers.id }).from(adminUsers).where(eq(adminUsers.id, targetId)).limit(1);
+	throw new AuthInputError(stillThere ? LAST_ADMIN_ERROR : 'Admin account not found');
 }
