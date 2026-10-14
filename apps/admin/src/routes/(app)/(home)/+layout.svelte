@@ -30,9 +30,9 @@
 <div class="min-h-dvh">
 	<header class="sticky top-0 z-20 border-b border-line bg-surface/90 backdrop-blur">
 		<div class="mx-auto flex h-14 max-w-[1100px] items-center gap-2 px-4 lg:px-6">
-			<a href="/" class="mr-2 flex shrink-0 items-center gap-2" aria-label="TokoBun home">
-				<div class="grid size-7 place-items-center rounded-md bg-accent text-[13px] font-bold text-accent-fg">TB</div>
-				<span class="hidden text-[13px] font-semibold sm:inline">TokoBun</span>
+			<a href="/" class="mr-2 flex shrink-0 items-center gap-2" aria-label="TokoLafan home">
+				<div class="grid size-7 place-items-center rounded-md bg-accent text-[13px] font-bold text-accent-fg">TL</div>
+				<span class="hidden text-[13px] font-semibold sm:inline">TokoLafan</span>
 			</a>
 			<nav class="flex items-center gap-0.5" aria-label="Main">
 				{#each nav as item (item.href)}
