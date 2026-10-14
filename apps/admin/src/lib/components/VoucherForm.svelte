@@ -14,6 +14,7 @@
 </script>
 
 <script lang="ts">
+	import { apiUrl } from '#lib/current-store.ts';
 	import { createForm } from '@tanstack/svelte-form';
 	import { createQuery } from '@tanstack/svelte-query';
 	import { api } from '#lib/api.ts';
@@ -25,7 +26,7 @@
 
 	const products = createQuery(() => ({
 		queryKey: ['product-options', 'sellable'],
-		queryFn: () => api<{ id: number; name: string; parentName: string | null }[]>('/api/products/options?kind=sellable')
+		queryFn: () => api<{ id: number; name: string; parentName: string | null }[]>(apiUrl('/products/options?kind=sellable'))
 	}));
 
 	const toLocalInput = (iso: string | null) => {
@@ -61,8 +62,8 @@
 				isActive: value.isActive
 			};
 			try {
-				if (initial?.id) await api(`/api/vouchers/${initial.id}`, { method: 'PUT', body });
-				else await api('/api/vouchers', { body });
+				if (initial?.id) await api(apiUrl(`/vouchers/${initial.id}`), { method: 'PUT', body });
+				else await api(apiUrl('/vouchers'), { body });
 				await onSaved();
 			} catch (e) {
 				serverError = (e as Error).message;

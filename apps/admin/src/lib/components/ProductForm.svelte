@@ -18,6 +18,7 @@
 </script>
 
 <script lang="ts">
+	import { apiUrl } from '#lib/current-store.ts';
 	import { createForm } from '@tanstack/svelte-form';
 	import { createQuery } from '@tanstack/svelte-query';
 	import { api, ApiError } from '#lib/api.ts';
@@ -36,7 +37,7 @@
 
 	const collections = createQuery(() => ({
 		queryKey: ['product-options', 'collection'],
-		queryFn: () => api<{ id: number; name: string }[]>('/api/products/options?kind=collection')
+		queryFn: () => api<{ id: number; name: string }[]>(apiUrl('/products/options?kind=collection'))
 	}));
 
 	const form = createForm(() => ({
@@ -76,8 +77,8 @@
 			};
 			try {
 				const res = productId
-					? await api<{ id: number }>(`/api/products/${productId}`, { method: 'PUT', body })
-					: await api<{ id: number }>('/api/products', { body });
+					? await api<{ id: number }>(apiUrl(`/products/${productId}`), { method: 'PUT', body })
+					: await api<{ id: number }>(apiUrl('/products'), { body });
 				await onSaved(res.id);
 			} catch (err) {
 				serverError = err instanceof ApiError ? err.message : String(err);
