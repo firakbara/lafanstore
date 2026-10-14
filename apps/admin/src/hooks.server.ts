@@ -1,6 +1,7 @@
 import type { Handle } from '@sveltejs/kit/hooks';
 import { getStoreBySlug, listStores } from '@tokobun/core';
 import { validateSession } from '#lib/server/auth.ts';
+import { isCrossSiteApiWrite } from '#lib/server/csrf.ts';
 import { CURRENCY_COOKIE } from '#lib/server/money.ts';
 import { LAST_STORE_COOKIE, SESSION_COOKIE, sessionCookieOptions as cookieOptions } from '#lib/server/session.ts';
 import { toPublicStore } from '#lib/server/stores.ts';
@@ -9,19 +10,26 @@ import { legacyRedirect } from '#lib/store-path.ts';
 const PUBLIC_PATHS = new Set(['/login', '/favicon.svg', '/robots.txt', '/api/health']);
 const SLUG_RE = /^[a-z0-9-]{1,64}$/;
 
-async function fallbackSlug(lastStore: string | null): Promise<string | null> {
-	if (lastStore) return lastStore;
+/** Store for legacy redirects: the last-store cookie when it still names a store, else the first store. */
+async function fallbackSlug(lastSlug: string | null): Promise<string | null> {
+	const last = lastSlug ? await getStoreBySlug(lastSlug) : null;
+	if (last) return last.slug;
 	const all = await listStores();
 	return all[0]?.slug ?? null;
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
+	const path = event.url.pathname;
+	// Before any session work: JSON writes must come from our own pages (see csrf.ts).
+	if (isCrossSiteApiWrite(event.request.method, path, event.request.headers.get('origin'), event.url.origin)) {
+		return Response.json({ error: 'Cross-site request blocked' }, { status: 403 });
+	}
+
 	const token = event.cookies.get(SESSION_COOKIE) ?? null;
 	event.locals.admin = null;
 	event.locals.sessionToken = null;
 	event.locals.store = null;
 	event.locals.storeId = 0;
-	event.locals.lastStore = null;
 	const ccy = event.cookies.get(CURRENCY_COOKIE);
 	event.locals.currency = ccy && /^[A-Z]{3,5}$/.test(ccy) ? ccy : null;
 
@@ -41,7 +49,6 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	}
 
-	const path = event.url.pathname;
 	const isApi = path.startsWith('/api/');
 	const isPublic = PUBLIC_PATHS.has(path) || path.startsWith('/_app/');
 	if (!event.locals.admin && !isPublic) {
@@ -51,13 +58,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	if (event.locals.admin) {
+		// Format-checked only; the store lookup happens lazily, just for legacy redirects.
 		const lastRaw = event.cookies.get(LAST_STORE_COOKIE);
-		const last = lastRaw && SLUG_RE.test(lastRaw) ? await getStoreBySlug(lastRaw) : null;
-		event.locals.lastStore = last?.slug ?? null;
+		const lastSlug = lastRaw && SLUG_RE.test(lastRaw) ? lastRaw : null;
 
 		// Old bookmarks (/orders, /products/5, …) land in the last-used store.
 		if (event.request.method === 'GET' && !isApi && legacyRedirect(path, '', 'x')) {
-			const target = legacyRedirect(path, event.url.search, await fallbackSlug(event.locals.lastStore));
+			const target = legacyRedirect(path, event.url.search, await fallbackSlug(lastSlug));
 			if (target) return new Response(null, { status: 303, headers: { location: target } });
 		}
 
@@ -68,7 +75,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 			if (store) {
 				event.locals.store = toPublicStore(store);
 				event.locals.storeId = store.id;
-				if (!isApi && event.request.method === 'GET' && event.locals.lastStore !== store.slug) {
+				if (!isApi && event.request.method === 'GET' && lastSlug !== store.slug) {
 					event.cookies.set(LAST_STORE_COOKIE, store.slug, { path: '/', httpOnly: true, secure: true, sameSite: 'lax', maxAge: 60 * 60 * 24 * 365 });
 				}
 			} else if (isApi) {

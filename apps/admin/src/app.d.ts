@@ -12,8 +12,6 @@ declare global {
 			store: PublicStore | null;
 			/** locals.store.id on store routes; 0 elsewhere. Global routes must not read it. */
 			storeId: number;
-			/** Slug from the last-store cookie when it names an existing store. */
-			lastStore: string | null;
 		}
 	}
 }

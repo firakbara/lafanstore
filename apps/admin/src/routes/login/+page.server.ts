@@ -1,12 +1,8 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { createSession, ensureBootstrapAdmin, verifyCredentials } from '#lib/server/auth.ts';
+import { safeNext } from '#lib/server/next.ts';
 import { SESSION_COOKIE, sessionCookieOptions } from '#lib/server/session.ts';
 import type { Actions, PageServerLoad } from './$types';
-
-function safeNext(raw: string | null): string {
-	// only same-origin relative paths
-	return raw && raw.startsWith('/') && !raw.startsWith('//') && !raw.startsWith('/login') ? raw : '/';
-}
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	if (locals.admin) redirect(303, safeNext(url.searchParams.get('next')));
