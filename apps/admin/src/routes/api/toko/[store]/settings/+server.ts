@@ -1,4 +1,4 @@
-import { getSettings, updateSettings, type StoreSettings } from '@tokobun/core';
+import { getSettings, updateSettings, updateStore, type StoreSettings } from '@tokobun/core';
 import { BadRequest, endpoint, int, readJson } from '#lib/server/http.ts';
 
 export const GET = endpoint(async ({ locals }) => getSettings(locals.storeId));
@@ -44,5 +44,7 @@ export const PUT = endpoint(async ({ request, locals }) => {
 			.sort((a, c) => a.minAmount - c.minAmount),
 		fxRates
 	};
-	return updateSettings(locals.storeId, patch);
+	const saved = await updateSettings(locals.storeId, patch);
+	await updateStore(locals.storeId, { name: storeName, channelUrl: patch.channelUrl });
+	return saved;
 });

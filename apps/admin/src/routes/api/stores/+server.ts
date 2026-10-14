@@ -1,83 +1,60 @@
-import { addStoreMember, createStore, updateStore } from '@tokobun/core';
-import { getDb, orders, products } from '@tokobun/db';
-import { eq, inArray, sql } from 'drizzle-orm';
-import { BadRequest, endpoint, int, readJson, str } from '#lib/server/http.ts';
+import { createStore, listStores, updateSettings } from '@tokobun/core';
+import { getDb, orders } from '@tokobun/db';
+import { and, gt, inArray, sql } from 'drizzle-orm';
+import { BadRequest, endpoint, jsonError, readJson, str } from '#lib/server/http.ts';
+import { verifyBotToken } from '#lib/server/telegram.ts';
 
-export const GET = endpoint(async ({ locals }) => {
-	const stores = locals.adminStores;
+/** Every store for the picker, with a 24 h order count. */
+export const GET = endpoint(async () => {
+	const stores = await listStores();
 	if (!stores.length) return { items: [] };
-	const db = getDb();
-	const ids = stores.map((s) => s.id);
-	const [prodStats, orderStats] = await Promise.all([
-		db.select({
-			storeId: products.storeId,
-			productCount: sql<number>`(count(*) filter (where ${products.isActive}))::int`,
-			totalProducts: sql<number>`count(*)::int`,
-		}).from(products).where(inArray(products.storeId, ids)).groupBy(products.storeId),
-		db.select({
-			storeId: orders.storeId,
-			totalOrders: sql<number>`count(*)::int`,
-			revenue: sql<string>`coalesce(sum(${orders.total}) filter (where ${orders.status} = 'completed'), 0)`,
-		}).from(orders).where(inArray(orders.storeId, ids)).groupBy(orders.storeId),
-	]);
-	const prodMap = new Map(prodStats.map((r) => [r.storeId, r]));
-	const orderMap = new Map(orderStats.map((r) => [r.storeId, r]));
-	const items = stores.map((s) => {
-		const p = prodMap.get(s.id);
-		const o = orderMap.get(s.id);
-		return {
-			id: s.id, slug: s.slug, name: s.name, botUsername: s.botUsername, adminChatId: s.adminChatId, channelUrl: s.channelUrl, isActive: s.isActive,
-			productCount: p?.productCount ?? 0,
-			totalProducts: p?.totalProducts ?? 0,
-			totalOrders: o?.totalOrders ?? 0,
-			revenue: Number(o?.revenue ?? 0),
-		};
-	});
-	return { items };
+	const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+	const counts = await getDb()
+		.select({ storeId: orders.storeId, n: sql<number>`count(*)::int` })
+		.from(orders)
+		.where(and(inArray(orders.storeId, stores.map((s) => s.id)), gt(orders.createdAt, since)))
+		.groupBy(orders.storeId);
+	const byStore = new Map(counts.map((c) => [c.storeId, c.n]));
+	return {
+		items: stores.map((s) => ({
+			id: s.id,
+			slug: s.slug,
+			name: s.name,
+			botUsername: s.botUsername,
+			isActive: s.isActive,
+			orders24h: byStore.get(s.id) ?? 0
+		}))
+	};
 });
 
-export const POST = endpoint(async ({ request, locals }) => {
+export const POST = endpoint(async ({ request }) => {
 	const body = await readJson(request);
-	const slug = str(body, 'slug', { max: 64 }).toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/^-+|-+$/g, '');
-	if (!/[a-z0-9]/.test(slug)) throw new BadRequest('Slug must contain at least one letter or digit', 'slug');
-	const name = str(body, 'name', { max: 128 });
-	const botToken = str(body, 'botToken', { max: 256 });
-	const rawBotUser = typeof body.botUsername === 'string' ? body.botUsername.trim().replace(/^@/, '') : '';
-	if (rawBotUser.length > 64) throw new BadRequest('botUsername is too long (max 64)');
-	const botUsername = rawBotUser || null;
-	const adminIds = Array.isArray(body.adminIds) ? body.adminIds.filter((n: unknown) => typeof n === 'number' && Number.isSafeInteger(n)).slice(0, 100) : [];
+	const slug = str(body, 'slug', { max: 64 }).toLowerCase().trim();
+	if (!/^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$/.test(slug)) throw new BadRequest('2–64 characters: a-z, 0-9 and -, not starting or ending with -', 'slug');
+	const name = str(body, 'name', { max: 128 }).trim();
+	if (!name) throw new BadRequest('Required', 'name');
+	const botToken = str(body, 'botToken', { max: 256 }).trim();
+	if (!/^\d+:[A-Za-z0-9_-]{30,}$/.test(botToken)) throw new BadRequest('Bot token format looks wrong (expected 123456:ABC…)', 'botToken');
+	const adminIds = Array.isArray(body.adminIds) ? body.adminIds.filter((n: unknown) => typeof n === 'number' && Number.isSafeInteger(n) && n > 0).slice(0, 100) : [];
 	const adminChatId = typeof body.adminChatId === 'number' && Number.isSafeInteger(body.adminChatId) ? body.adminChatId : null;
 	const rawChannel = typeof body.channelUrl === 'string' ? body.channelUrl.trim() : '';
-	if (rawChannel.length > 256) throw new BadRequest('channelUrl is too long (max 256)');
-	if (rawChannel && !/^https?:\/\//i.test(rawChannel)) throw new BadRequest('channelUrl must be a valid URL starting with http(s)://');
+	if (rawChannel && (rawChannel.length > 256 || !/^https?:\/\/\S+$/i.test(rawChannel))) throw new BadRequest('Must be a URL starting with https://', 'channelUrl');
 	const channelUrl = rawChannel || null;
-	const store = await createStore({ slug, name, botToken, botUsername, adminIds, adminChatId, channelUrl });
-	if (locals.admin) await addStoreMember(store.id, locals.admin.id, 'owner');
-	return store;
-});
 
-export const PATCH = endpoint(async ({ request, locals }) => {
-	const body = await readJson(request);
-	const id = int(body, 'id', { min: 1 });
-	if (!locals.adminStores.some((s) => s.id === id)) throw new BadRequest('Store not found or no access');
-	const patch: Record<string, unknown> = {};
-	if (typeof body.name === 'string') patch.name = str(body, 'name', { max: 128 });
-	if (typeof body.botToken === 'string') patch.botToken = str(body, 'botToken', { max: 256 });
-	if (typeof body.botUsername === 'string') {
-		const bu = body.botUsername.trim().replace(/^@/, '');
-		if (bu.length > 64) throw new BadRequest('botUsername is too long (max 64)');
-		patch.botUsername = bu || null;
+	const v = await verifyBotToken(botToken);
+	if (!v.ok) {
+		if (v.reason === 'invalid') throw new BadRequest(v.message, 'botToken');
+		return jsonError(502, v.message);
 	}
-	if (typeof body.channelUrl === 'string') {
-		const cu = body.channelUrl.trim();
-		if (cu.length > 256) throw new BadRequest('channelUrl is too long (max 256)');
-		if (cu && !/^https?:\/\//i.test(cu)) throw new BadRequest('channelUrl must be a valid URL starting with http(s)://');
-		patch.channelUrl = cu || null;
+	let store;
+	try {
+		store = await createStore({ slug, name, botToken, botUsername: v.username, adminIds, adminChatId, channelUrl });
+	} catch (err) {
+		const msg = (err as Error).message;
+		if (/slug/.test(msg)) throw new BadRequest('A store with this slug already exists', 'slug');
+		if (/bot token/.test(msg)) throw new BadRequest('This bot is already used by another store', 'botToken');
+		throw err;
 	}
-	if (Array.isArray(body.adminIds)) patch.adminIds = body.adminIds.filter((n: unknown) => typeof n === 'number' && Number.isSafeInteger(n)).slice(0, 100);
-	if (body.adminChatId === null) patch.adminChatId = null;
-	else if (typeof body.adminChatId === 'number' && Number.isSafeInteger(body.adminChatId)) patch.adminChatId = body.adminChatId;
-	if (typeof body.isActive === 'boolean') patch.isActive = body.isActive;
-	const store = await updateStore(id, patch);
-	return store;
+	await updateSettings(store.id, { storeName: name, channelUrl });
+	return { id: store.id, slug: store.slug };
 });
