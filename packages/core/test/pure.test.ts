@@ -214,7 +214,7 @@ describe('DEFAULT_SETTINGS', () => {
     expect(DEFAULT_SETTINGS.orderPaymentTtlMinutes).toBe(15);
     expect(DEFAULT_SETTINGS.fxRates).toEqual({});
     expect(DEFAULT_SETTINGS.supportedLanguages).toEqual(['id', 'en']);
-    expect(DEFAULT_SETTINGS.storeName).toBe('TokoBun');
+    expect(DEFAULT_SETTINGS.storeName).toBe('TokoLafan');
     expect(DEFAULT_SETTINGS.channelUrl).toBeNull();
     expect(DEFAULT_SETTINGS.supportUsername).toBeNull();
   });

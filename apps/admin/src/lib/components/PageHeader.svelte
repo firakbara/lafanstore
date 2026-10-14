@@ -4,7 +4,7 @@
 	let { title, subtitle, back, actions }: { title: string; subtitle?: string; back?: { href: string; label: string }; actions?: Snippet } = $props();
 </script>
 
-<svelte:head><title>{title} · TokoBun</title></svelte:head>
+<svelte:head><title>{title} · TokoLafan</title></svelte:head>
 
 <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
 	<div class="min-w-0">

@@ -175,7 +175,7 @@
 				{#snippet children(field)}
 					<label class="block">
 						<span class="label">Support username</span>
-						<input class="input" placeholder="tokobun_support" value={field.state.value} onblur={field.handleBlur} oninput={(e) => field.handleChange(e.currentTarget.value)} />
+						<input class="input" placeholder="tokolafan_support" value={field.state.value} onblur={field.handleBlur} oninput={(e) => field.handleChange(e.currentTarget.value)} />
 						<FieldError {field} />
 					</label>
 				{/snippet}

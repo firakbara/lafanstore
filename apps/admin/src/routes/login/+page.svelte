@@ -5,14 +5,14 @@
 	let submitting = $state(false);
 </script>
 
-<svelte:head><title>Sign in · TokoBun Admin</title></svelte:head>
+<svelte:head><title>Sign in · TokoLafan Admin</title></svelte:head>
 
 <div class="grid min-h-dvh place-items-center px-4">
 	<div class="w-full max-w-[360px]">
 		<div class="mb-6 flex items-center gap-2.5">
-			<div class="grid size-9 place-items-center rounded-lg bg-accent text-sm font-bold text-accent-fg">TB</div>
+			<div class="grid size-9 place-items-center rounded-lg bg-accent text-sm font-bold text-accent-fg">TL</div>
 			<div>
-				<div class="text-[15px] font-semibold">TokoBun Admin</div>
+				<div class="text-[15px] font-semibold">TokoLafan Admin</div>
 				<div class="text-xs text-muted">Sign in to manage the store</div>
 			</div>
 		</div>

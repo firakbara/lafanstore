@@ -172,7 +172,7 @@ if (force) {
 const [existingStore] = await db.select().from(stores).where(eq(stores.slug, 'default')).limit(1);
 const storeId = existingStore?.id ?? (await createStore({
   slug: 'default',
-  name: process.env.STORE_NAME || 'TokoBun',
+  name: process.env.STORE_NAME || 'TokoLafan',
   botToken: process.env.BOT_TOKEN || 'placeholder',
   botUsername: process.env.BOT_USERNAME?.replace(/^@/, '') || null,
   adminIds: (process.env.ADMIN_IDS ?? '').split(',').map((s) => Number(s.trim())).filter((n) => Number.isSafeInteger(n) && n > 0),
@@ -229,7 +229,7 @@ await updateSettings(storeId, {
   orderPaymentTtlMinutes: 15,
   fxRates: { IDR: 16300, EUR: 0.92, GBP: 0.79, MYR: 4.7, SGD: 1.35, PHP: 58, THB: 36, VND: 25400, INR: 83.5 },
   supportedLanguages: ['id', 'en'],
-  storeName: 'TokoBun',
+  storeName: 'TokoLafan',
   channelUrl: process.env.CHANNEL_URL || null,
   supportUsername: null,
 });

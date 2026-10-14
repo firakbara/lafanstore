@@ -2,7 +2,7 @@
 	import { page } from '$app/state';
 </script>
 
-<svelte:head><title>{page.status} · TokoBun Admin</title></svelte:head>
+<svelte:head><title>{page.status} · TokoLafan Admin</title></svelte:head>
 
 <div class="grid min-h-dvh place-items-center px-4">
 	<div class="text-center">

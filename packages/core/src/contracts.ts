@@ -211,9 +211,9 @@ export interface StoreSettings {
   orderPaymentTtlMinutes: number; // default 15 — reservation + invoice lifetime for direct pay
   fxRates: Record<string, number>; // units of currency per 1 USD, e.g. { IDR: 16300 }. USD implied 1
   supportedLanguages: string[]; // default ['id','en']
-  storeName: string; // default 'TokoBun'
+  storeName: string; // default 'TokoLafan'
   channelUrl: string | null;
-  supportUsername: string | null; // e.g. 'tokobun_support'
+  supportUsername: string | null; // e.g. 'tokolafan_support'
 }
 
 // ---------- broadcasts ----------

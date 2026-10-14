@@ -94,7 +94,7 @@ describe('users', () => {
 describe('settings', () => {
   test('defaults merged with stored values', async () => {
     const s = await getSettings(1);
-    expect(s).toMatchObject({ referralPercentBp: 500, referralMaxPerTopup: 300, topupMin: 100, orderPaymentTtlMinutes: 15, storeName: 'TokoBun' });
+    expect(s).toMatchObject({ referralPercentBp: 500, referralMaxPerTopup: 300, topupMin: 100, orderPaymentTtlMinutes: 15, storeName: 'TokoLafan' });
     const s2 = await updateSettings(1, { fxRates: { IDR: 16300 }, storeName: 'Shop' });
     expect(s2.fxRates).toEqual({ IDR: 16300 });
     expect(s2.storeName).toBe('Shop');

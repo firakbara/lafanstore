@@ -14,7 +14,7 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   orderPaymentTtlMinutes: 15,
   fxRates: {},
   supportedLanguages: ['id', 'en'],
-  storeName: 'TokoBun',
+  storeName: 'TokoLafan',
   channelUrl: null,
   supportUsername: null,
 };
