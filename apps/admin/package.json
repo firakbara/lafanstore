@@ -1,0 +1,40 @@
+{
+	"name": "@tokobun/admin",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"scripts": {
+		"dev": "bun --bun vite dev",
+		"build": "bun --bun vite build",
+		"preview": "bun --bun vite preview",
+		"start": "bun --env-file=../../.env build/index.js",
+		"prepare": "svelte-kit sync || echo ''",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"test": "bun test src"
+	},
+	"imports": {
+		"#lib": "./src/lib/index.ts",
+		"#lib/*": "./src/lib/*"
+	},
+	"dependencies": {
+		"@tanstack/svelte-form": "^1.33.5",
+		"@tanstack/svelte-query": "^6.3.1",
+		"@tanstack/svelte-table": "^9.2.4",
+		"@tokobun/core": "workspace:*",
+		"@tokobun/db": "workspace:*",
+		"drizzle-orm": "^0.45.3"
+	},
+	"devDependencies": {
+		"@sveltejs/adapter-node": "^6",
+		"@sveltejs/kit": "^3",
+		"@sveltejs/vite-plugin-svelte": "^7",
+		"@tailwindcss/forms": "^0.5.11",
+		"@tailwindcss/vite": "^4.3.3",
+		"bun-types": "^1.4.2",
+		"svelte": "^5.57.1",
+		"svelte-check": "^4.7.6",
+		"tailwindcss": "^4.3.3",
+		"typescript": "^6",
+		"vite": "^8"
+	}
+}

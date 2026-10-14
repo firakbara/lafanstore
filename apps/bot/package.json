@@ -1,0 +1,24 @@
+{
+  "name": "@tokobun/bot",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --env-file=../../.env --watch src/index.ts",
+    "start": "bun --env-file=../../.env src/index.ts",
+    "test": "bun test",
+    "smoke": "bun --env-file=../../.env scripts/smoke.ts",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@tokobun/core": "workspace:*",
+    "@tokobun/db": "workspace:*",
+    "@tokobun/i18n": "workspace:*",
+    "@tokobun/payments": "workspace:*",
+    "grammy": "^1.46.0",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/qrcode": "^1.5.6"
+  }
+}

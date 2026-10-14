@@ -1,0 +1,21 @@
+{
+  "name": "tokobun",
+  "private": true,
+  "type": "module",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "db:up": "docker compose up -d postgres",
+    "db:generate": "bun --cwd packages/db drizzle-kit generate",
+    "db:migrate": "bun --cwd packages/db run migrate",
+    "db:seed": "bun --cwd packages/core run seed",
+    "dev:bot": "bun --cwd apps/bot run dev",
+    "dev:api": "bun --cwd apps/api run dev",
+    "dev:admin": "bun --cwd apps/admin run dev",
+    "typecheck": "bunx tsc -b",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "bun-types": "^1.4.2",
+    "typescript": "^7.0.2"
+  }
+}

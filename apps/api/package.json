@@ -1,0 +1,19 @@
+{
+  "name": "@tokobun/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch --env-file=../../.env src/main.ts",
+    "start": "bun --env-file=../../.env src/main.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@tokobun/core": "workspace:*",
+    "@tokobun/db": "workspace:*",
+    "@tokobun/i18n": "workspace:*",
+    "@tokobun/payments": "workspace:*",
+    "grammy": "^1.46.0",
+    "hono": "^4.13.12"
+  }
+}

@@ -1,0 +1,136 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/forms';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+	--bg: oklch(0.985 0.002 250);
+	--surface: oklch(1 0 0);
+	--surface-2: oklch(0.97 0.004 250);
+	--border: oklch(0.91 0.006 250);
+	--text: oklch(0.22 0.02 260);
+	--muted: oklch(0.52 0.02 260);
+	--accent: oklch(0.55 0.17 262);
+	--accent-fg: oklch(0.99 0 0);
+	--accent-soft: oklch(0.95 0.03 262);
+	--ok: oklch(0.56 0.14 152);
+	--ok-soft: oklch(0.95 0.05 152);
+	--warn: oklch(0.62 0.15 70);
+	--warn-soft: oklch(0.96 0.05 85);
+	--danger: oklch(0.56 0.2 25);
+	--danger-soft: oklch(0.95 0.03 25);
+	--info: oklch(0.56 0.12 230);
+	--info-soft: oklch(0.95 0.03 230);
+}
+
+:root.dark {
+	color-scheme: dark;
+	--bg: oklch(0.17 0.01 260);
+	--surface: oklch(0.21 0.012 260);
+	--surface-2: oklch(0.245 0.013 260);
+	--border: oklch(0.31 0.014 260);
+	--text: oklch(0.93 0.006 260);
+	--muted: oklch(0.68 0.015 260);
+	--accent: oklch(0.68 0.15 262);
+	--accent-fg: oklch(0.16 0.02 262);
+	--accent-soft: oklch(0.3 0.06 262);
+	--ok: oklch(0.72 0.14 152);
+	--ok-soft: oklch(0.3 0.05 152);
+	--warn: oklch(0.78 0.13 80);
+	--warn-soft: oklch(0.32 0.05 80);
+	--danger: oklch(0.7 0.17 25);
+	--danger-soft: oklch(0.32 0.06 25);
+	--info: oklch(0.72 0.11 230);
+	--info-soft: oklch(0.3 0.05 230);
+}
+
+@theme inline {
+	--color-bg: var(--bg);
+	--color-surface: var(--surface);
+	--color-surface-2: var(--surface-2);
+	--color-line: var(--border);
+	--color-fg: var(--text);
+	--color-muted: var(--muted);
+	--color-accent: var(--accent);
+	--color-accent-fg: var(--accent-fg);
+	--color-accent-soft: var(--accent-soft);
+	--color-ok: var(--ok);
+	--color-ok-soft: var(--ok-soft);
+	--color-warn: var(--warn);
+	--color-warn-soft: var(--warn-soft);
+	--color-danger: var(--danger);
+	--color-danger-soft: var(--danger-soft);
+	--color-info: var(--info);
+	--color-info-soft: var(--info-soft);
+	--font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	--font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+html,
+body {
+	background: var(--bg);
+	color: var(--text);
+}
+body {
+	font-family: var(--font-sans);
+	font-size: 14px;
+	-webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+	.card {
+		@apply rounded-lg border border-line bg-surface;
+	}
+	.btn {
+		@apply inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-line bg-surface px-3 text-[13px] font-medium whitespace-nowrap text-fg transition-colors hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50;
+	}
+	.btn-primary {
+		@apply border-transparent bg-accent text-accent-fg hover:bg-accent/90;
+	}
+	.btn-danger {
+		@apply border-transparent bg-danger text-white hover:bg-danger/90;
+	}
+	.btn-ghost {
+		@apply border-transparent bg-transparent hover:bg-surface-2;
+	}
+	.btn-sm {
+		@apply h-7 px-2 text-xs;
+	}
+	.input {
+		@apply block h-8 w-full rounded-md border-line bg-surface px-2.5 text-[13px] text-fg placeholder:text-muted focus:border-accent focus:ring-1 focus:ring-accent;
+	}
+	textarea.input {
+		@apply h-auto py-2;
+	}
+	select.input {
+		@apply py-0 pr-8 leading-8;
+	}
+	.label {
+		@apply mb-1 block text-xs font-medium text-muted;
+	}
+	.field-error {
+		@apply mt-1 text-xs text-danger;
+	}
+	.checkbox {
+		@apply size-4 rounded border-line bg-surface text-accent focus:ring-accent checked:bg-current indeterminate:bg-current;
+	}
+	.kv {
+		@apply grid grid-cols-[minmax(110px,auto)_1fr] gap-x-4 gap-y-1.5 text-[13px];
+	}
+	.kv > dt {
+		@apply text-muted;
+	}
+	.kv > dd {
+		@apply min-w-0 break-words;
+	}
+	.mono {
+		@apply font-mono text-[12px];
+	}
+	.link {
+		@apply text-accent hover:underline;
+	}
+}
+
+.tabular {
+	font-variant-numeric: tabular-nums;
+}

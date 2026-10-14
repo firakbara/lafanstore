@@ -1,0 +1,11 @@
+node_modules
+.env
+.env.local
+.env.*.local
+.svelte-kit
+build
+dist
+*.tsbuildinfo
+.playwright-mcp
+*.log
+.DS_Store
