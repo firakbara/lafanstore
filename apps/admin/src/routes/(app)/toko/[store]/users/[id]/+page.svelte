@@ -88,8 +88,8 @@
 	}
 
 	const refLink = (e: Entry) => {
-		if (e.refType === 'order' && e.refId) return `/orders/${e.refId}`;
-		if (e.refType === 'payment' && e.refId) return `/payments/${e.refId}`;
+		if (e.refType === 'order' && e.refId) return link(`/orders/${e.refId}`);
+		if (e.refType === 'payment' && e.refId) return link(`/payments/${e.refId}`);
 		return null;
 	};
 
@@ -106,9 +106,9 @@
 {#snippet amountCell(e: Entry)}<span class="tabular whitespace-nowrap {e.amount >= 0 ? 'text-ok' : 'text-danger'}">{e.amount >= 0 ? '+' : ''}{e.fmt.amount}</span>{/snippet}
 {#snippet afterCell(e: Entry)}<span class="tabular whitespace-nowrap">{e.fmt.balanceAfter}</span>{/snippet}
 {#snippet refCell(e: Entry)}
-	{@const link = refLink(e)}
+	{@const refHref = refLink(e)}
 	<div class="max-w-[320px] text-xs">
-		{#if link}<a class="link" href={link}>{e.refType} #{e.refId}</a>{:else if e.refType}<span class="text-muted">{e.refType} {e.refId ?? ''}</span>{/if}
+		{#if refHref}<a class="link" href={refHref}>{e.refType} #{e.refId}</a>{:else if e.refType}<span class="text-muted">{e.refType} {e.refId ?? ''}</span>{/if}
 		{#if e.note}<div class="truncate text-muted" title={e.note}>{e.note}</div>{/if}
 	</div>
 {/snippet}

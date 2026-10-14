@@ -1,14 +1,7 @@
-<script lang="ts" module>
-	// Store pages use query keys without the slug (['dashboard'], ['settings'], …), so cached
-	// results must never be shown under another store. Tracks which store the cache belongs to.
-	let cachedStore: string | null = null;
-</script>
-
 <script lang="ts">
-	import { useQueryClient } from '@tanstack/svelte-query';
-	import { untrack } from 'svelte';
+	import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/svelte-query';
 	import { browser } from '$app/env';
-	import { goto, onNavigate } from '$app/navigation';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { api } from '#lib/api.ts';
 	import Badge from '#lib/components/Badge.svelte';
@@ -18,7 +11,30 @@
 
 	let { data, children } = $props();
 
-	const queryClient = useQueryClient();
+	// Each store gets its own QueryClient. Store pages use query keys without the slug (['dashboard'],
+	// ['settings'], …), and the outgoing store's pages stay mounted (and may refetch) until the incoming
+	// ones render, so a shared cache could hand one store's data to another even right after clearing it.
+	// `slug` is its own derived so that new `data` for the same store (invalidateAll) keeps the client.
+	const appClient = useQueryClient(); // the (app) layout's client: store picker, accounts
+	const slug = $derived(data.store.slug);
+	const storeClient = $derived.by(() => {
+		void slug; // a new client (with an empty cache) for every store
+		return new QueryClient({
+			defaultOptions: {
+				queries: { enabled: browser, staleTime: 10_000, retry: 1, refetchOnWindowFocus: true }
+			}
+		});
+	});
+	$effect(() => {
+		const client = storeClient;
+		return () => {
+			// Runs on a store switch and when leaving the store: drop the discarded cache (and its timers).
+			client.clear();
+			// Store pages' invalidations only reach their own client; app-level lists (store names,
+			// active flags, order counts) may have changed meanwhile.
+			void appClient.invalidateQueries();
+		};
+	});
 
 	const sections = [
 		{ path: '', label: 'Dashboard', icon: 'M3 12l9-9 9 9M5 10v10h14V10' },
@@ -40,20 +56,6 @@
 	let menuOpen = $state(false);
 	let dark = $state(browser && document.documentElement.classList.contains('dark'));
 
-	/** Drop every cached query when the cache was filled by a different store. */
-	function scopeCacheTo(slug: string) {
-		if (!browser) return;
-		if (cachedStore !== null && cachedStore !== slug) queryClient.removeQueries();
-		cachedStore = slug;
-	}
-	// Entering from the picker (or another store's bookmark): runs before the pages create their queries.
-	scopeCacheTo(untrack(() => data.store.slug));
-	// Switching store while this layout stays mounted: runs before the new pages render (see {#key} below).
-	onNavigate(({ to }) => {
-		const slug = to?.params?.store;
-		if (slug) scopeCacheTo(slug);
-	});
-
 	function isActive(path: string) {
 		const p = page.url.pathname;
 		const href = link(path);
@@ -74,7 +76,7 @@
 		const currency = (e.target as HTMLSelectElement).value;
 		try {
 			await api('/api/currency', { body: { currency } });
-			await queryClient.invalidateQueries();
+			await storeClient.invalidateQueries();
 		} catch (err) {
 			toast.error((err as Error).message);
 		}
@@ -162,10 +164,17 @@
 			</form>
 		</header>
 		<main class="mx-auto max-w-[1400px] p-4 lg:p-6">
-			<!-- Re-create the pages on a store switch: same-route navigation would otherwise keep them (and their state) mounted. -->
-			{#key data.store.slug}
-				{@render children()}
-			{/key}
+			<!--
+				Re-create the pages with the store's own QueryClient on a store switch: same-route navigation would otherwise
+				keep them (and their state) mounted. Works like {#key slug} (storeClient changes exactly when the slug does),
+				but hands each branch its client as a fixed value: QueryClientProvider reads its `client` prop again in
+				onDestroy, so a reactive prop would unmount the incoming client instead of the outgoing one.
+			-->
+			{#each [storeClient] as client (client)}
+				<QueryClientProvider {client}>
+					{@render children()}
+				</QueryClientProvider>
+			{/each}
 		</main>
 	</div>
 </div>
