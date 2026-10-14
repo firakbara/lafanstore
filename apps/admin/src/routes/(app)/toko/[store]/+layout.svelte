@@ -34,6 +34,9 @@
 		{ path: '/settings', label: 'Settings', icon: 'M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z' }
 	];
 
+	// The cookie is global but rates are per store: a currency this store has no rate for shows as USD only.
+	const shownCurrency = $derived(data.currency && data.currencies.includes(data.currency) ? data.currency : 'USD');
+
 	let menuOpen = $state(false);
 	let dark = $state(browser && document.documentElement.classList.contains('dark'));
 
@@ -106,13 +109,13 @@
 				<div class="truncate text-[11px] text-muted">{data.store.botUsername ? `@${data.store.botUsername}` : 'Admin panel'}</div>
 			</div>
 		</div>
-		<div class="shrink-0 space-y-1.5 border-b border-line p-2">
+		<div class="shrink-0 space-y-1 border-b border-line p-2">
 			{#if data.stores.length > 1}
-				<select class="input h-7 text-xs leading-7" value={data.store.slug} onchange={switchStore} aria-label="Switch store">
+				<select class="input h-7 text-xs leading-7" value={data.store.slug} onchange={switchStore} aria-label="Switch store" title="Switch store">
 					{#each data.stores as s (s.slug)}<option value={s.slug}>{s.name}{s.isActive ? '' : ' (inactive)'}</option>{/each}
 				</select>
 			{/if}
-			<a href="/" class="inline-flex items-center gap-1 rounded px-0.5 text-xs text-muted transition-colors hover:text-fg">← All stores</a>
+			<a href="/" class="flex items-center rounded-md px-2.5 py-1 text-xs text-muted transition-colors hover:bg-surface-2 hover:text-fg">← All stores</a>
 		</div>
 		<nav class="flex flex-col gap-0.5 overflow-y-auto p-2" aria-label="Store">
 			{#each sections as item (item.path)}
@@ -141,7 +144,7 @@
 			<div class="flex-1"></div>
 			<label class="flex shrink-0 items-center gap-1.5 text-xs text-muted">
 				<span class="hidden sm:inline">Also show</span>
-				<select class="input h-7 w-auto py-0 text-xs" value={data.currency ?? 'USD'} onchange={setCurrency} aria-label="Secondary currency">
+				<select class="input h-7 w-auto py-0 text-xs" value={shownCurrency} onchange={setCurrency} aria-label="Secondary currency">
 					<option value="USD">USD only</option>
 					{#each data.currencies as c (c)}<option value={c}>{c}</option>{/each}
 				</select>
