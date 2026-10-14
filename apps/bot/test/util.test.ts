@@ -239,7 +239,7 @@ describe('config & parsing', () => {
     expect(cfg.botUsername).toBe('shop_bot');
     expect(cfg.webhookUrl).toBe('https://a.b');
     expect(parseConfig({ BOT_TOKEN: 'x', ADMIN_CHAT_ID: '' }).adminChatId).toBeNull();
-    expect(() => parseConfig({})).toThrow();
+    expect(parseConfig({}).botToken).toBe('');
   });
   test('broadcastWorker defaults to true, opt-out with "false"', () => {
     expect(parseConfig({ BOT_TOKEN: 'x' }).broadcastWorker).toBe(true);

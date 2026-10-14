@@ -31,8 +31,8 @@ const int = (v: string | undefined): number | null => {
 };
 
 export function parseConfig(env: Record<string, string | undefined>): BotConfig {
-  const botToken = str(env.BOT_TOKEN);
-  if (!botToken) throw new Error('BOT_TOKEN is not set (get one from @BotFather and put it in the root .env)');
+  // Per-store tokens live in the stores table; BOT_TOKEN is only a legacy fallback value.
+  const botToken = str(env.BOT_TOKEN) ?? '';
   const adminIds = (env.ADMIN_IDS ?? '')
     .split(',')
     .map((s) => Number(s.trim()))

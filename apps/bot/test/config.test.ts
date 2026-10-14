@@ -20,10 +20,9 @@ describe('parseConfig', () => {
 		expect(cfg.broadcastWorker).toBe(true);
 	});
 
-	test('throws when BOT_TOKEN missing', () => {
-		expect(() => parseConfig({})).toThrow('BOT_TOKEN');
-		expect(() => parseConfig({ BOT_TOKEN: '' })).toThrow('BOT_TOKEN');
-		expect(() => parseConfig({ BOT_TOKEN: '  ' })).toThrow('BOT_TOKEN');
+	test('BOT_TOKEN is optional (stores come from the database)', () => {
+		expect(parseConfig({}).botToken).toBe('');
+		expect(parseConfig({ BOT_TOKEN: '  ' }).botToken).toBe('');
 	});
 
 	test('parses ADMIN_IDS', () => {
